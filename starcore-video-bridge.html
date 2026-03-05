@@ -1,0 +1,637 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>STARCORE — Video Bridge</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #020408;
+    --surface: #080d14;
+    --border: #0ff3;
+    --accent: #00f0ff;
+    --accent2: #ff00aa;
+    --glow: 0 0 20px #00f0ff88;
+    --text: #c8eeff;
+    --mono: 'Share Tech Mono', monospace;
+    --display: 'Orbitron', sans-serif;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--mono);
+    min-height: 100vh;
+    overflow-x: hidden;
+    position: relative;
+  }
+
+  /* Scanline overlay */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(0,240,255,0.015) 2px,
+      rgba(0,240,255,0.015) 4px
+    );
+    pointer-events: none;
+    z-index: 9999;
+  }
+
+  /* Grid bg */
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(0,240,255,0.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,240,255,0.04) 1px, transparent 1px);
+    background-size: 48px 48px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .container {
+    position: relative;
+    z-index: 1;
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 40px 20px 60px;
+  }
+
+  /* Header */
+  header {
+    text-align: center;
+    margin-bottom: 48px;
+    position: relative;
+  }
+
+  .logo-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    margin-bottom: 8px;
+  }
+
+  .logo-icon {
+    width: 48px;
+    height: 48px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+    animation: pulse-icon 3s ease-in-out infinite;
+    flex-shrink: 0;
+  }
+
+  @keyframes pulse-icon {
+    0%, 100% { filter: drop-shadow(0 0 8px var(--accent)); }
+    50% { filter: drop-shadow(0 0 24px var(--accent)) drop-shadow(0 0 48px var(--accent2)); }
+  }
+
+  h1 {
+    font-family: var(--display);
+    font-size: clamp(28px, 5vw, 48px);
+    font-weight: 900;
+    letter-spacing: 0.12em;
+    background: linear-gradient(90deg, var(--accent), #ffffff, var(--accent2));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .tagline {
+    font-size: 12px;
+    letter-spacing: 0.3em;
+    color: #00f0ff88;
+    text-transform: uppercase;
+    margin-top: 4px;
+  }
+
+  /* Blinking cursor */
+  .cursor { animation: blink 1s step-end infinite; }
+  @keyframes blink { 50% { opacity: 0; } }
+
+  /* Panel */
+  .panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 2px;
+    padding: 28px 32px;
+    margin-bottom: 24px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .panel::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--accent), transparent);
+  }
+
+  .panel-title {
+    font-family: var(--display);
+    font-size: 11px;
+    letter-spacing: 0.25em;
+    color: var(--accent);
+    text-transform: uppercase;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .panel-title::before {
+    content: '';
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    background: var(--accent);
+    box-shadow: var(--glow);
+    border-radius: 50%;
+    animation: pulse-dot 2s ease-in-out infinite;
+  }
+
+  @keyframes pulse-dot {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+  }
+
+  /* Input */
+  label {
+    display: block;
+    font-size: 11px;
+    letter-spacing: 0.2em;
+    color: #00f0ff88;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+
+  input[type="text"] {
+    width: 100%;
+    background: #020810;
+    border: 1px solid #0ff3;
+    border-radius: 2px;
+    padding: 12px 16px;
+    font-family: var(--mono);
+    font-size: 14px;
+    color: var(--text);
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+
+  input[type="text"]:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px #00f0ff22, var(--glow);
+  }
+
+  input[type="text"]::placeholder { color: #0ff3; }
+
+  /* Buttons */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-family: var(--display);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    padding: 12px 24px;
+    border: 1px solid;
+    border-radius: 2px;
+    cursor: pointer;
+    transition: all 0.2s;
+    background: transparent;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .btn::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: currentColor;
+    opacity: 0;
+    transition: opacity 0.2s;
+  }
+
+  .btn:hover::after { opacity: 0.08; }
+
+  .btn-primary {
+    color: var(--accent);
+    border-color: var(--accent);
+  }
+
+  .btn-primary:hover {
+    box-shadow: 0 0 20px #00f0ff44, inset 0 0 20px #00f0ff0a;
+  }
+
+  .btn-danger {
+    color: var(--accent2);
+    border-color: var(--accent2);
+  }
+
+  .btn-danger:hover {
+    box-shadow: 0 0 20px #ff00aa44, inset 0 0 20px #ff00aa0a;
+  }
+
+  .btn-success {
+    color: #00ffaa;
+    border-color: #00ffaa;
+  }
+
+  .btn-success:hover {
+    box-shadow: 0 0 20px #00ffaa44;
+  }
+
+  /* Row flex */
+  .row { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 16px; }
+
+  /* Video preview */
+  #preview-wrap {
+    position: relative;
+    width: 100%;
+    padding-bottom: 40%;
+    background: #000;
+    border: 1px solid #0ff2;
+    border-radius: 2px;
+    overflow: hidden;
+    margin-top: 16px;
+  }
+
+  #preview-wrap iframe {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    border: none;
+  }
+
+  .preview-placeholder {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    color: #0ff4;
+    font-size: 12px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+  }
+
+  .preview-placeholder .icon {
+    font-size: 36px;
+    opacity: 0.3;
+  }
+
+  /* Link output */
+  #link-output {
+    display: none;
+    margin-top: 16px;
+  }
+
+  .link-box {
+    background: #020810;
+    border: 1px solid #00ffaa44;
+    border-radius: 2px;
+    padding: 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .link-box code {
+    flex: 1;
+    font-family: var(--mono);
+    font-size: 13px;
+    color: #00ffaa;
+    word-break: break-all;
+  }
+
+  /* Instructions */
+  .step {
+    display: flex;
+    gap: 16px;
+    align-items: flex-start;
+    padding: 16px 0;
+    border-bottom: 1px solid #0ff1;
+  }
+
+  .step:last-child { border-bottom: none; }
+
+  .step-num {
+    font-family: var(--display);
+    font-size: 20px;
+    font-weight: 900;
+    color: var(--accent);
+    opacity: 0.4;
+    line-height: 1;
+    min-width: 32px;
+  }
+
+  .step-body h3 {
+    font-family: var(--display);
+    font-size: 12px;
+    letter-spacing: 0.15em;
+    color: var(--accent);
+    margin-bottom: 6px;
+  }
+
+  .step-body p {
+    font-size: 13px;
+    line-height: 1.7;
+    color: #8aabb8;
+  }
+
+  .step-body code {
+    background: #0ff1;
+    padding: 1px 6px;
+    border-radius: 2px;
+    color: #00f0ff;
+    font-size: 12px;
+  }
+
+  /* Current video badge */
+  #current-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: #00f0ff11;
+    border: 1px solid #00f0ff33;
+    border-radius: 2px;
+    padding: 6px 14px;
+    font-size: 12px;
+    color: var(--accent);
+    margin-top: 12px;
+  }
+
+  /* Toast */
+  #toast {
+    position: fixed;
+    bottom: 32px;
+    right: 32px;
+    background: #080d14;
+    border: 1px solid #00ffaa;
+    color: #00ffaa;
+    font-family: var(--mono);
+    font-size: 12px;
+    letter-spacing: 0.1em;
+    padding: 12px 20px;
+    border-radius: 2px;
+    box-shadow: 0 0 20px #00ffaa44;
+    opacity: 0;
+    transform: translateY(12px);
+    transition: all 0.3s;
+    z-index: 10000;
+  }
+
+  #toast.show {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  /* Footer */
+  footer {
+    text-align: center;
+    margin-top: 48px;
+    font-size: 11px;
+    color: #0ff3;
+    letter-spacing: 0.2em;
+  }
+
+  /* Responsive */
+  @media (max-width: 600px) {
+    .panel { padding: 20px; }
+    .row { flex-direction: column; }
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <header>
+    <div class="logo-row">
+      <div class="logo-icon"></div>
+      <h1>STARCORE</h1>
+      <div class="logo-icon"></div>
+    </div>
+    <p class="tagline">Video Bridge System — By HSTR <span class="cursor">_</span></p>
+  </header>
+
+  <!-- SET VIDEO PANEL -->
+  <div class="panel">
+    <div class="panel-title">Set Loading Screen Video</div>
+
+    <label for="yt-input">YouTube Video URL or Video ID</label>
+    <input type="text" id="yt-input"
+      placeholder="https://www.youtube.com/watch?v=XXXXXXXXX  atau  dQw4w9WgXcQ" />
+
+    <div id="current-badge">
+      <span>▶</span>
+      <span id="current-id-label">No video set</span>
+    </div>
+
+    <div id="preview-wrap">
+      <div class="preview-placeholder" id="preview-placeholder">
+        <div class="icon">⬡</div>
+        <span>Preview will appear here</span>
+      </div>
+    </div>
+
+    <div class="row">
+      <button class="btn btn-primary" onclick="previewVideo()">
+        <span>◈</span> Preview
+      </button>
+      <button class="btn btn-success" onclick="saveVideo()">
+        <span>◉</span> Save & Generate Link
+      </button>
+      <button class="btn btn-danger" onclick="clearVideo()">
+        <span>◌</span> Clear
+      </button>
+    </div>
+
+    <div id="link-output">
+      <label style="margin-top:0">Generated Bridge Link (paste to Roblox script)</label>
+      <div class="link-box">
+        <code id="generated-link"></code>
+        <button class="btn btn-primary" style="padding:8px 14px; font-size:10px;" onclick="copyLink()">Copy</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- HOW TO USE -->
+  <div class="panel">
+    <div class="panel-title">How To Use</div>
+
+    <div class="step">
+      <div class="step-num">01</div>
+      <div class="step-body">
+        <h3>Upload halaman ini ke hosting gratis</h3>
+        <p>Gunakan <code>GitHub Pages</code>, <code>Netlify</code>, atau <code>Vercel</code> — semuanya gratis. Cukup upload file HTML ini, kamu dapat URL publik seperti <code>https://yourname.github.io/starcore-bridge</code></p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">02</div>
+      <div class="step-body">
+        <h3>Paste URL YouTube & klik Save</h3>
+        <p>Masukkan URL video YouTube (maks 1 menit untuk best experience loading screen). Klik <code>Save & Generate Link</code> — link bridge akan terbuat otomatis dengan video ID tersimpan di URL.</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">03</div>
+      <div class="step-body">
+        <h3>Copy link ke Roblox Script</h3>
+        <p>Copy link yang ter-generate, lalu paste ke variabel <code>BRIDGE_URL</code> di Roblox LocalScript. Script akan auto-load video dari bridge ini.</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">04</div>
+      <div class="step-body">
+        <h3>Ganti video kapan saja</h3>
+        <p>Kamu bisa kembali ke halaman ini, masukkan URL baru, dan update link di script Roblox. Tidak perlu re-upload ke Roblox sama sekali.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ROBLOX SCRIPT SNIPPET -->
+  <div class="panel">
+    <div class="panel-title">Roblox Script — Variable to Update</div>
+    <div class="link-box" style="border-color: #ff00aa44;">
+      <code id="roblox-snippet" style="color:#ff88cc;">-- Paste link ini di LocalScript kamu:<br>local BRIDGE_URL = "<span id="roblox-url-inline">https://yourpage.github.io/starcore-bridge/?v=VIDEO_ID</span>"</code>
+    </div>
+    <div class="row">
+      <button class="btn btn-danger" onclick="copySnippet()"><span>◈</span> Copy Snippet</button>
+    </div>
+  </div>
+
+  <footer>STARCORE VIDEO BRIDGE — HSTR © 2025 &nbsp;|&nbsp; SYSTEM ONLINE</footer>
+</div>
+
+<div id="toast">✓ Copied to clipboard!</div>
+
+<script>
+  const STORAGE_KEY = 'starcore_video_id';
+
+  function extractVideoId(input) {
+    input = input.trim();
+    // Already just an ID (11 chars alphanumeric+- _)
+    if (/^[A-Za-z0-9_\-]{11}$/.test(input)) return input;
+    // youtu.be/ID
+    let m = input.match(/youtu\.be\/([A-Za-z0-9_\-]{11})/);
+    if (m) return m[1];
+    // youtube.com/watch?v=ID
+    m = input.match(/[?&]v=([A-Za-z0-9_\-]{11})/);
+    if (m) return m[1];
+    // youtube.com/embed/ID
+    m = input.match(/embed\/([A-Za-z0-9_\-]{11})/);
+    if (m) return m[1];
+    return null;
+  }
+
+  function previewVideo() {
+    const input = document.getElementById('yt-input').value;
+    const id = extractVideoId(input);
+    if (!id) { showToast('⚠ Invalid YouTube URL!', '#ff4444'); return; }
+    showPreview(id);
+  }
+
+  function showPreview(id) {
+    const wrap = document.getElementById('preview-wrap');
+    document.getElementById('preview-placeholder').style.display = 'none';
+    let iframe = wrap.querySelector('iframe');
+    if (!iframe) {
+      iframe = document.createElement('iframe');
+      iframe.allow = 'autoplay; encrypted-media';
+      iframe.allowFullscreen = true;
+      wrap.appendChild(iframe);
+    }
+    iframe.src = `https://www.youtube.com/embed/${id}?autoplay=1&mute=1&controls=1&rel=0`;
+  }
+
+  function saveVideo() {
+    const input = document.getElementById('yt-input').value;
+    const id = extractVideoId(input);
+    if (!id) { showToast('⚠ Invalid YouTube URL!', '#ff4444'); return; }
+
+    localStorage.setItem(STORAGE_KEY, id);
+    updateBadge(id);
+    showPreview(id);
+    generateLink(id);
+    showToast('✓ Video saved & link generated!');
+  }
+
+  function generateLink(id) {
+    const base = window.location.href.split('?')[0];
+    const link = `${base}?v=${id}`;
+    document.getElementById('generated-link').textContent = link;
+    document.getElementById('link-output').style.display = 'block';
+    document.getElementById('roblox-url-inline').textContent = link;
+  }
+
+  function clearVideo() {
+    localStorage.removeItem(STORAGE_KEY);
+    document.getElementById('yt-input').value = '';
+    document.getElementById('current-id-label').textContent = 'No video set';
+    document.getElementById('link-output').style.display = 'none';
+    const wrap = document.getElementById('preview-wrap');
+    const iframe = wrap.querySelector('iframe');
+    if (iframe) iframe.remove();
+    document.getElementById('preview-placeholder').style.display = 'flex';
+    document.getElementById('roblox-url-inline').textContent = 'https://yourpage.github.io/starcore-bridge/?v=VIDEO_ID';
+    showToast('◌ Cleared', '#ff00aa');
+  }
+
+  function updateBadge(id) {
+    document.getElementById('current-id-label').textContent = `Video ID: ${id}`;
+  }
+
+  function copyLink() {
+    const link = document.getElementById('generated-link').textContent;
+    navigator.clipboard.writeText(link).then(() => showToast('✓ Link copied!'));
+  }
+
+  function copySnippet() {
+    const url = document.getElementById('roblox-url-inline').textContent;
+    const snippet = `local BRIDGE_URL = "${url}"`;
+    navigator.clipboard.writeText(snippet).then(() => showToast('✓ Snippet copied!'));
+  }
+
+  function showToast(msg, color) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.style.borderColor = color || '#00ffaa';
+    t.style.color = color || '#00ffaa';
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2500);
+  }
+
+  // On load: check URL param or localStorage
+  window.addEventListener('DOMContentLoaded', () => {
+    const params = new URLSearchParams(window.location.search);
+    const urlId = params.get('v');
+    const savedId = localStorage.getItem(STORAGE_KEY);
+    const id = urlId || savedId;
+
+    if (id) {
+      document.getElementById('yt-input').value = id;
+      updateBadge(id);
+      generateLink(id);
+    }
+  });
+</script>
+</body>
+</html>
