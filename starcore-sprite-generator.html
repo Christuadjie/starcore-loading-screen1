@@ -1,0 +1,1064 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>STARCORE — Sprite Generator</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #03050a;
+  --surface: #070c14;
+  --surface2: #0a1120;
+  --border: rgba(0,240,255,0.15);
+  --accent: #00f0ff;
+  --accent2: #ff006a;
+  --accent3: #ffe500;
+  --text: #c0dff0;
+  --text-dim: rgba(0,240,255,0.4);
+  --glow: 0 0 24px rgba(0,240,255,0.35);
+  --mono: 'Share Tech Mono', monospace;
+  --display: 'Orbitron', sans-serif;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+html{scroll-behavior:smooth;}
+body{
+  background:var(--bg);
+  color:var(--text);
+  font-family:var(--mono);
+  min-height:100vh;
+  overflow-x:hidden;
+}
+
+/* Noise overlay */
+body::before{
+  content:'';position:fixed;inset:0;
+  background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+  pointer-events:none;z-index:9998;opacity:0.6;
+}
+/* Scanlines */
+body::after{
+  content:'';position:fixed;inset:0;
+  background:repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(0,240,255,0.012) 3px,rgba(0,240,255,0.012) 4px);
+  pointer-events:none;z-index:9999;
+}
+
+/* Grid bg */
+.grid-bg{
+  position:fixed;inset:0;z-index:0;
+  background-image:
+    linear-gradient(rgba(0,240,255,0.03) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(0,240,255,0.03) 1px,transparent 1px);
+  background-size:64px 64px;
+}
+
+/* Glow orbs */
+.orb{
+  position:fixed;border-radius:50%;pointer-events:none;z-index:0;filter:blur(80px);
+}
+.orb1{width:400px;height:400px;background:rgba(0,240,255,0.06);top:-100px;right:-100px;}
+.orb2{width:300px;height:300px;background:rgba(255,0,106,0.05);bottom:100px;left:-80px;}
+
+.wrap{position:relative;z-index:1;max-width:960px;margin:0 auto;padding:40px 20px 80px;}
+
+/* ── HEADER ── */
+header{text-align:center;margin-bottom:52px;}
+.logo{
+  display:inline-flex;align-items:center;gap:14px;
+  margin-bottom:12px;
+}
+.hex{
+  width:52px;height:52px;
+  background:linear-gradient(135deg,var(--accent),var(--accent2));
+  clip-path:polygon(50% 0%,100% 25%,100% 75%,50% 100%,0% 75%,0% 25%);
+  animation:hex-pulse 3s ease-in-out infinite;
+}
+@keyframes hex-pulse{
+  0%,100%{filter:drop-shadow(0 0 8px var(--accent));}
+  50%{filter:drop-shadow(0 0 28px var(--accent)) drop-shadow(0 0 56px var(--accent2));}
+}
+h1{
+  font-family:var(--display);font-size:clamp(26px,5vw,46px);font-weight:900;
+  letter-spacing:0.1em;
+  background:linear-gradient(90deg,var(--accent) 0%,#fff 50%,var(--accent2) 100%);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+}
+.subtitle{
+  font-size:11px;letter-spacing:0.35em;color:var(--text-dim);
+  text-transform:uppercase;margin-top:6px;
+}
+.badge{
+  display:inline-flex;align-items:center;gap:6px;
+  background:rgba(0,240,255,0.07);border:1px solid rgba(0,240,255,0.2);
+  border-radius:2px;padding:4px 14px;font-size:11px;color:var(--accent);
+  letter-spacing:0.15em;margin-top:12px;
+}
+.dot{width:6px;height:6px;border-radius:50%;background:var(--accent);
+  box-shadow:0 0 8px var(--accent);animation:blink 1.4s step-end infinite;}
+@keyframes blink{50%{opacity:0;}}
+
+/* ── PANEL ── */
+.panel{
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:3px;
+  padding:28px 32px;
+  margin-bottom:20px;
+  position:relative;overflow:hidden;
+}
+.panel-line{
+  position:absolute;top:0;left:0;right:0;height:2px;
+  background:linear-gradient(90deg,transparent,var(--accent),transparent);
+}
+.panel-line.pink{background:linear-gradient(90deg,transparent,var(--accent2),transparent);}
+.panel-line.yellow{background:linear-gradient(90deg,transparent,var(--accent3),transparent);}
+
+.panel-title{
+  font-family:var(--display);font-size:10px;letter-spacing:0.28em;
+  color:var(--accent);text-transform:uppercase;
+  display:flex;align-items:center;gap:10px;margin-bottom:22px;
+}
+.panel-title .dot{flex-shrink:0;}
+
+/* ── DROP ZONE ── */
+#drop-zone{
+  border:2px dashed rgba(0,240,255,0.2);border-radius:3px;
+  padding:48px 20px;text-align:center;cursor:pointer;
+  transition:all 0.3s;position:relative;overflow:hidden;
+  background:rgba(0,240,255,0.02);
+}
+#drop-zone:hover,#drop-zone.drag-over{
+  border-color:var(--accent);
+  background:rgba(0,240,255,0.06);
+  box-shadow:inset 0 0 30px rgba(0,240,255,0.05);
+}
+#drop-zone .icon{font-size:40px;margin-bottom:14px;opacity:0.5;}
+#drop-zone h3{font-family:var(--display);font-size:13px;letter-spacing:0.15em;color:var(--accent);margin-bottom:6px;}
+#drop-zone p{font-size:12px;color:var(--text-dim);}
+#file-input{display:none;}
+
+#video-preview-wrap{
+  display:none;margin-top:16px;
+  background:#000;border:1px solid var(--border);border-radius:3px;overflow:hidden;
+  position:relative;
+}
+#video-el{width:100%;max-height:280px;display:block;}
+.video-info{
+  padding:10px 16px;background:rgba(0,0,0,0.6);
+  font-size:11px;color:var(--text-dim);display:flex;gap:20px;flex-wrap:wrap;
+}
+.video-info span{color:var(--accent);}
+
+/* ── CONTROLS ── */
+.controls-grid{
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));
+  gap:16px;margin-bottom:20px;
+}
+.ctrl-group{display:flex;flex-direction:column;gap:8px;}
+label{font-size:11px;letter-spacing:0.2em;color:var(--text-dim);text-transform:uppercase;}
+
+input[type=range]{
+  -webkit-appearance:none;width:100%;height:4px;
+  background:rgba(0,240,255,0.15);border-radius:2px;outline:none;cursor:pointer;
+}
+input[type=range]::-webkit-slider-thumb{
+  -webkit-appearance:none;width:16px;height:16px;border-radius:50%;
+  background:var(--accent);box-shadow:0 0 8px var(--accent);cursor:pointer;
+}
+input[type=number],input[type=text],select{
+  width:100%;background:#020810;border:1px solid rgba(0,240,255,0.2);
+  border-radius:2px;padding:10px 14px;font-family:var(--mono);font-size:13px;
+  color:var(--text);outline:none;transition:border-color 0.2s,box-shadow 0.2s;
+  -moz-appearance:textfield;
+}
+input[type=number]:focus,input[type=text]:focus,select:focus{
+  border-color:var(--accent);box-shadow:0 0 0 2px rgba(0,240,255,0.1);
+}
+select option{background:#070c14;}
+input[type=number]::-webkit-outer-spin-button,
+input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
+
+.range-val{
+  font-family:var(--display);font-size:18px;font-weight:700;
+  color:var(--accent);text-shadow:var(--glow);
+}
+
+/* ── BUTTONS ── */
+.btn{
+  display:inline-flex;align-items:center;gap:8px;
+  font-family:var(--display);font-size:11px;font-weight:700;
+  letter-spacing:0.2em;text-transform:uppercase;
+  padding:13px 26px;border:1px solid;border-radius:2px;
+  cursor:pointer;transition:all 0.2s;background:transparent;
+  position:relative;overflow:hidden;white-space:nowrap;
+}
+.btn::after{content:'';position:absolute;inset:0;background:currentColor;opacity:0;transition:opacity 0.2s;}
+.btn:hover::after{opacity:0.08;}
+.btn:disabled{opacity:0.3;cursor:not-allowed;}
+.btn-cyan{color:var(--accent);border-color:var(--accent);}
+.btn-cyan:hover:not(:disabled){box-shadow:0 0 20px rgba(0,240,255,0.3),inset 0 0 20px rgba(0,240,255,0.05);}
+.btn-pink{color:var(--accent2);border-color:var(--accent2);}
+.btn-pink:hover:not(:disabled){box-shadow:0 0 20px rgba(255,0,106,0.3);}
+.btn-yellow{color:var(--accent3);border-color:var(--accent3);}
+.btn-yellow:hover:not(:disabled){box-shadow:0 0 20px rgba(255,229,0,0.3);}
+.btn-green{color:#00ffaa;border-color:#00ffaa;}
+.btn-green:hover:not(:disabled){box-shadow:0 0 20px rgba(0,255,170,0.3);}
+.row{display:flex;gap:12px;flex-wrap:wrap;}
+
+/* ── PROGRESS ── */
+#progress-panel{display:none;}
+.prog-bar-wrap{
+  background:rgba(0,240,255,0.08);border:1px solid var(--border);
+  border-radius:2px;height:8px;overflow:hidden;margin:12px 0;
+}
+.prog-bar-fill{
+  height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));
+  width:0%;transition:width 0.1s;
+  box-shadow:0 0 12px var(--accent);
+}
+#prog-text{font-size:12px;color:var(--text-dim);}
+#prog-count{font-family:var(--display);font-size:28px;font-weight:900;color:var(--accent);text-shadow:var(--glow);}
+
+/* ── PREVIEW STRIP ── */
+#preview-panel{display:none;}
+#frame-strip{
+  display:flex;gap:6px;overflow-x:auto;padding:12px 0;
+  scrollbar-width:thin;scrollbar-color:var(--accent) transparent;
+}
+#frame-strip::-webkit-scrollbar{height:4px;}
+#frame-strip::-webkit-scrollbar-thumb{background:var(--accent);border-radius:2px;}
+.frame-thumb{
+  flex-shrink:0;width:80px;height:50px;object-fit:cover;
+  border:1px solid var(--border);border-radius:2px;cursor:pointer;
+  transition:border-color 0.2s,transform 0.2s;
+}
+.frame-thumb:hover{border-color:var(--accent);transform:scale(1.05);}
+.frame-thumb.selected{border-color:var(--accent);box-shadow:0 0 8px var(--accent);}
+
+/* ── PREVIEW ANIMATION ── */
+#anim-preview{
+  width:100%;max-width:480px;
+  aspect-ratio:16/9;border:1px solid var(--border);border-radius:3px;
+  background:#000;margin:16px auto;display:block;image-rendering:pixelated;
+}
+.anim-controls{
+  display:flex;align-items:center;justify-content:center;gap:16px;flex-wrap:wrap;
+  margin-top:12px;
+}
+
+/* ── DOWNLOAD / OUTPUT ── */
+#output-panel{display:none;}
+.output-grid{
+  display:grid;grid-template-columns:repeat(auto-fill,minmax(100px,1fr));
+  gap:10px;max-height:360px;overflow-y:auto;padding:4px;
+  scrollbar-width:thin;scrollbar-color:var(--accent) transparent;
+}
+.output-grid::-webkit-scrollbar{width:4px;}
+.output-grid::-webkit-scrollbar-thumb{background:var(--accent);border-radius:2px;}
+.output-item{
+  display:flex;flex-direction:column;align-items:center;gap:6px;
+  background:var(--surface2);border:1px solid var(--border);
+  border-radius:3px;padding:8px;
+}
+.output-item img{width:100%;aspect-ratio:16/9;object-fit:cover;border-radius:2px;}
+.output-item a{
+  font-size:10px;color:var(--accent);text-decoration:none;letter-spacing:0.1em;
+  text-transform:uppercase;
+}
+.output-item a:hover{text-decoration:underline;}
+.frame-num{font-size:9px;color:var(--text-dim);}
+
+/* Lua snippet */
+.code-box{
+  background:#020810;border:1px solid rgba(0,255,170,0.2);
+  border-radius:3px;padding:16px 20px;
+  font-family:var(--mono);font-size:12px;
+  color:#00ffaa;line-height:1.8;overflow-x:auto;
+  max-height:300px;overflow-y:auto;
+  white-space:pre;
+  scrollbar-width:thin;scrollbar-color:#00ffaa transparent;
+}
+.code-box::-webkit-scrollbar{width:4px;height:4px;}
+.code-box::-webkit-scrollbar-thumb{background:#00ffaa44;border-radius:2px;}
+
+/* Stats row */
+.stats{display:flex;gap:24px;flex-wrap:wrap;margin:16px 0;}
+.stat{display:flex;flex-direction:column;gap:2px;}
+.stat-val{font-family:var(--display);font-size:22px;font-weight:900;color:var(--accent);}
+.stat-label{font-size:10px;color:var(--text-dim);letter-spacing:0.2em;text-transform:uppercase;}
+
+/* Toast */
+#toast{
+  position:fixed;bottom:28px;right:28px;
+  background:var(--surface);border:1px solid #00ffaa;
+  color:#00ffaa;font-family:var(--mono);font-size:12px;
+  letter-spacing:0.1em;padding:12px 20px;border-radius:2px;
+  box-shadow:0 0 20px rgba(0,255,170,0.3);
+  opacity:0;transform:translateY(10px);transition:all 0.3s;z-index:10000;
+}
+#toast.show{opacity:1;transform:translateY(0);}
+
+/* Tabs */
+.tab-row{display:flex;gap:0;border-bottom:1px solid var(--border);margin-bottom:20px;}
+.tab{
+  font-family:var(--display);font-size:10px;letter-spacing:0.2em;
+  padding:10px 20px;border-bottom:2px solid transparent;
+  cursor:pointer;color:var(--text-dim);transition:all 0.2s;
+  text-transform:uppercase;background:none;border-top:none;border-left:none;border-right:none;
+}
+.tab.active{color:var(--accent);border-bottom-color:var(--accent);}
+.tab-panel{display:none;}
+.tab-panel.active{display:block;}
+
+/* Divider */
+.divider{border:none;border-top:1px solid var(--border);margin:20px 0;}
+
+@media(max-width:600px){
+  .panel{padding:18px;}
+  .controls-grid{grid-template-columns:1fr 1fr;}
+  .btn{padding:10px 16px;}
+}
+</style>
+</head>
+<body>
+<div class="grid-bg"></div>
+<div class="orb orb1"></div>
+<div class="orb orb2"></div>
+
+<div class="wrap">
+
+  <!-- HEADER -->
+  <header>
+    <div class="logo">
+      <div class="hex"></div>
+      <h1>STARCORE</h1>
+      <div class="hex"></div>
+    </div>
+    <p class="subtitle">Video → Sprite Generator &nbsp;|&nbsp; By HSTR</p>
+    <div class="badge"><span class="dot"></span> SYSTEM ONLINE</div>
+  </header>
+
+  <!-- STEP 1: UPLOAD VIDEO -->
+  <div class="panel">
+    <div class="panel-line"></div>
+    <div class="panel-title"><span class="dot"></span> STEP 01 — Upload Video</div>
+
+    <div id="drop-zone" onclick="document.getElementById('file-input').click()">
+      <div class="icon">⬡</div>
+      <h3>Drop Video Here</h3>
+      <p>MP4, WebM, MOV — atau klik untuk browse</p>
+      <p style="margin-top:6px;font-size:11px;color:rgba(0,240,255,0.25);">Rekomendasi: video ≤ 1 menit untuk loading screen</p>
+    </div>
+    <input type="file" id="file-input" accept="video/*">
+
+    <div id="video-preview-wrap">
+      <video id="video-el" controls muted></video>
+      <div class="video-info">
+        <div>Durasi: <span id="info-duration">—</span></div>
+        <div>Resolusi: <span id="info-res">—</span></div>
+        <div>File: <span id="info-name">—</span></div>
+        <div>Size: <span id="info-size">—</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 2: SETTINGS -->
+  <div class="panel">
+    <div class="panel-line pink"></div>
+    <div class="panel-title"><span class="dot" style="background:var(--accent2);box-shadow:0 0 8px var(--accent2);"></span> STEP 02 — Pengaturan Sprite</div>
+
+    <div class="controls-grid">
+      <div class="ctrl-group">
+        <label>FPS Extract <span class="range-val" id="fps-val">2</span></label>
+        <input type="range" id="fps-range" min="1" max="30" value="2"
+          oninput="document.getElementById('fps-val').textContent=this.value;updateEstimate()">
+        <p style="font-size:11px;color:var(--text-dim);">Frame per detik yang di-extract dari video</p>
+      </div>
+      <div class="ctrl-group">
+        <label>Max Frames <span class="range-val" id="maxf-val">60</span></label>
+        <input type="range" id="maxf-range" min="10" max="300" value="60" step="5"
+          oninput="document.getElementById('maxf-val').textContent=this.value;updateEstimate()">
+        <p style="font-size:11px;color:var(--text-dim);">Batas total frame yang di-generate</p>
+      </div>
+      <div class="ctrl-group">
+        <label>Output Width (px)</label>
+        <input type="number" id="out-w" value="512" min="64" max="1920">
+      </div>
+      <div class="ctrl-group">
+        <label>Output Height (px)</label>
+        <input type="number" id="out-h" value="288" min="36" max="1080">
+      </div>
+      <div class="ctrl-group">
+        <label>Format Output</label>
+        <select id="out-fmt">
+          <option value="image/jpeg">JPEG (lebih kecil)</option>
+          <option value="image/png" selected>PNG (lebih jernih)</option>
+          <option value="image/webp">WebP (terbaik)</option>
+        </select>
+      </div>
+      <div class="ctrl-group">
+        <label>Quality (JPEG/WebP)</label>
+        <input type="range" id="quality-range" min="30" max="100" value="85"
+          oninput="document.getElementById('q-val').textContent=this.value+'%'">
+        <span class="range-val" id="q-val" style="font-size:14px;">85%</span>
+      </div>
+    </div>
+
+    <div class="ctrl-group" style="margin-bottom:16px;">
+      <label>Start Time (detik, opsional)</label>
+      <input type="number" id="start-time" value="0" min="0" step="0.1" style="max-width:200px;">
+    </div>
+    <div class="ctrl-group" style="margin-bottom:20px;">
+      <label>End Time (detik, 0 = sampai akhir)</label>
+      <input type="number" id="end-time" value="0" min="0" step="0.1" style="max-width:200px;">
+    </div>
+
+    <div id="estimate-box" style="background:rgba(0,240,255,0.05);border:1px solid var(--border);border-radius:2px;padding:12px 16px;margin-bottom:16px;font-size:12px;color:var(--text-dim);">
+      Estimasi: <span id="est-frames" style="color:var(--accent);font-weight:bold;">—</span> frames &nbsp;|&nbsp; Upload ke Roblox: <span id="est-uploads" style="color:var(--accent2);">—</span> decal
+    </div>
+
+    <div class="row">
+      <button class="btn btn-pink" id="extract-btn" onclick="startExtract()" disabled>
+        <span>◈</span> Extract Frames
+      </button>
+    </div>
+  </div>
+
+  <!-- STEP 3: PROGRESS -->
+  <div class="panel" id="progress-panel">
+    <div class="panel-line yellow"></div>
+    <div class="panel-title"><span class="dot" style="background:var(--accent3);box-shadow:0 0 8px var(--accent3);animation:none;"></span> Extracting Frames...</div>
+    <div id="prog-count">0</div>
+    <p style="font-size:11px;color:var(--text-dim);margin-bottom:8px;">frames extracted</p>
+    <div class="prog-bar-wrap"><div class="prog-bar-fill" id="prog-fill"></div></div>
+    <p id="prog-text">Memproses frame...</p>
+  </div>
+
+  <!-- STEP 4: PREVIEW & DOWNLOAD -->
+  <div class="panel" id="preview-panel">
+    <div class="panel-line"></div>
+
+    <div class="tab-row">
+      <button class="tab active" onclick="switchTab('tab-preview',this)">Preview Animasi</button>
+      <button class="tab" onclick="switchTab('tab-frames',this)">Semua Frames</button>
+      <button class="tab" onclick="switchTab('tab-script',this)">Roblox Script</button>
+    </div>
+
+    <!-- Tab: Preview -->
+    <div class="tab-panel active" id="tab-preview">
+      <div class="stats">
+        <div class="stat"><div class="stat-val" id="stat-frames">0</div><div class="stat-label">Total Frames</div></div>
+        <div class="stat"><div class="stat-val" id="stat-fps">—</div><div class="stat-label">FPS Extract</div></div>
+        <div class="stat"><div class="stat-val" id="stat-size">—</div><div class="stat-label">Resolusi</div></div>
+        <div class="stat"><div class="stat-val" id="stat-dur">—</div><div class="stat-label">Durasi Video</div></div>
+      </div>
+
+      <canvas id="anim-preview"></canvas>
+
+      <div class="anim-controls">
+        <label style="display:flex;align-items:center;gap:8px;margin:0;">
+          Preview FPS
+          <input type="range" id="preview-fps" min="1" max="30" value="12" style="width:100px;"
+            oninput="document.getElementById('pfps-val').textContent=this.value;restartAnim()">
+          <span style="color:var(--accent);font-family:var(--display);font-size:14px;" id="pfps-val">12</span>
+        </label>
+        <button class="btn btn-cyan" style="padding:8px 16px;font-size:10px;" onclick="toggleAnim()" id="play-btn">⏸ Pause</button>
+        <button class="btn btn-pink" style="padding:8px 16px;font-size:10px;" onclick="resetAnim()">⟳ Reset</button>
+      </div>
+    </div>
+
+    <!-- Tab: All Frames -->
+    <div class="tab-panel" id="tab-frames">
+      <p style="font-size:11px;color:var(--text-dim);margin-bottom:12px;">Klik frame untuk preview. Download semua atau per-frame.</p>
+      <div class="row" style="margin-bottom:16px;">
+        <button class="btn btn-green" onclick="downloadAll()"><span>↓</span> Download Semua (ZIP)</button>
+        <button class="btn btn-cyan" onclick="downloadSelected()" id="dl-selected-btn" disabled><span>↓</span> Download Selected</button>
+        <button class="btn btn-pink" style="padding:10px 16px;font-size:10px;" onclick="selectAll()">Select All</button>
+        <button class="btn" style="color:#888;border-color:#333;padding:10px 16px;font-size:10px;" onclick="deselectAll()">Deselect</button>
+      </div>
+      <div id="output-grid" class="output-grid"></div>
+    </div>
+
+    <!-- Tab: Roblox Script -->
+    <div class="tab-panel" id="tab-script">
+      <p style="font-size:12px;color:var(--text-dim);margin-bottom:16px;line-height:1.8;">
+        1. Download semua frames dari tab <b style="color:var(--accent);">Semua Frames</b><br>
+        2. Upload tiap PNG sebagai <b style="color:var(--accent);">Decal</b> di <code style="color:var(--accent2);">create.roblox.com</code><br>
+        3. Copy asset ID tiap decal, paste ke array <code style="color:var(--accent2);">FRAME_IDS</code> di bawah<br>
+        4. Script ini otomatis animasikan semua frame di loading screen
+      </p>
+
+      <label style="margin-bottom:8px;display:block;">Roblox Lua Script (siap pakai)</label>
+      <div class="code-box" id="lua-code">-- Generate frames dulu untuk melihat script</div>
+
+      <div class="row" style="margin-top:16px;">
+        <button class="btn btn-green" onclick="copyLua()"><span>◈</span> Copy Script</button>
+        <button class="btn btn-cyan" onclick="downloadLua()"><span>↓</span> Download .lua</button>
+      </div>
+    </div>
+
+    <hr class="divider">
+    <div class="row">
+      <button class="btn btn-pink" onclick="resetAll()"><span>◌</span> Reset — Upload Video Baru</button>
+    </div>
+  </div>
+
+</div><!-- /wrap -->
+
+<!-- OUTPUT PANEL (hidden, for output grid) -->
+<div id="output-panel"></div>
+
+<div id="toast"></div>
+
+<!-- JSZip for download all -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+
+<script>
+// ── STATE ──
+let videoFile = null;
+let frames = []; // {blob, url, dataUrl}
+let selectedFrames = new Set();
+let animInterval = null;
+let animFrame = 0;
+let animPlaying = true;
+
+// ── DROP ZONE ──
+const dropZone = document.getElementById('drop-zone');
+const fileInput = document.getElementById('file-input');
+
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+dropZone.addEventListener('drop', e => {
+  e.preventDefault(); dropZone.classList.remove('drag-over');
+  const f = e.dataTransfer.files[0];
+  if (f && f.type.startsWith('video/')) loadVideo(f);
+});
+fileInput.addEventListener('change', e => { if (e.target.files[0]) loadVideo(e.target.files[0]); });
+
+function loadVideo(file) {
+  videoFile = file;
+  const url = URL.createObjectURL(file);
+  const vid = document.getElementById('video-el');
+  vid.src = url;
+  vid.onloadedmetadata = () => {
+    document.getElementById('info-duration').textContent = vid.duration.toFixed(2) + 's';
+    document.getElementById('info-res').textContent = vid.videoWidth + '×' + vid.videoHeight;
+    document.getElementById('info-name').textContent = file.name;
+    document.getElementById('info-size').textContent = (file.size/1024/1024).toFixed(2) + ' MB';
+    document.getElementById('video-preview-wrap').style.display = 'block';
+    document.getElementById('extract-btn').disabled = false;
+    // auto set end time
+    document.getElementById('end-time').value = vid.duration.toFixed(1);
+    updateEstimate();
+  };
+}
+
+function updateEstimate() {
+  const fps = parseInt(document.getElementById('fps-range').value);
+  const maxF = parseInt(document.getElementById('maxf-range').value);
+  const vid = document.getElementById('video-el');
+  const start = parseFloat(document.getElementById('start-time').value)||0;
+  const end = parseFloat(document.getElementById('end-time').value)||vid.duration||0;
+  const dur = Math.max(0, (end||vid.duration||0) - start);
+  const est = Math.min(Math.floor(dur * fps), maxF);
+  document.getElementById('est-frames').textContent = est || '—';
+  document.getElementById('est-uploads').textContent = est ? est + ' decal' : '—';
+}
+
+// ── EXTRACT ──
+async function startExtract() {
+  if (!videoFile) return;
+
+  frames = [];
+  selectedFrames.clear();
+  document.getElementById('progress-panel').style.display = 'block';
+  document.getElementById('preview-panel').style.display = 'none';
+
+  const vid = document.createElement('video');
+  vid.src = URL.createObjectURL(videoFile);
+  vid.muted = true;
+  await new Promise(r => { vid.onloadedmetadata = r; });
+
+  const fps    = parseInt(document.getElementById('fps-range').value);
+  const maxF   = parseInt(document.getElementById('maxf-range').value);
+  const w      = parseInt(document.getElementById('out-w').value);
+  const h      = parseInt(document.getElementById('out-h').value);
+  const fmt    = document.getElementById('out-fmt').value;
+  const q      = parseInt(document.getElementById('quality-range').value) / 100;
+  const startT = parseFloat(document.getElementById('start-time').value) || 0;
+  const endT   = parseFloat(document.getElementById('end-time').value) || vid.duration;
+
+  const interval = 1 / fps;
+  const times = [];
+  for (let t = startT; t < endT && times.length < maxF; t += interval) {
+    times.push(+t.toFixed(4));
+  }
+
+  const canvas = document.createElement('canvas');
+  canvas.width = w; canvas.height = h;
+  const ctx = canvas.getContext('2d');
+
+  const progFill = document.getElementById('prog-fill');
+  const progText = document.getElementById('prog-text');
+  const progCount = document.getElementById('prog-count');
+
+  for (let i = 0; i < times.length; i++) {
+    vid.currentTime = times[i];
+    await new Promise(r => { vid.onseeked = r; });
+    ctx.drawImage(vid, 0, 0, w, h);
+
+    const dataUrl = canvas.toDataURL(fmt, q);
+    const blob = await (await fetch(dataUrl)).blob();
+    frames.push({ blob, url: URL.createObjectURL(blob), dataUrl });
+
+    const pct = Math.round(((i+1)/times.length)*100);
+    progFill.style.width = pct + '%';
+    progText.textContent = `Frame ${i+1} / ${times.length} — ${pct}%`;
+    progCount.textContent = i + 1;
+
+    await new Promise(r => setTimeout(r, 0)); // yield
+  }
+
+  document.getElementById('progress-panel').style.display = 'none';
+  showResults(w, h, fps);
+  toast('✓ ' + frames.length + ' frames berhasil di-extract!');
+}
+
+function showResults(w, h, fps) {
+  const vid = document.getElementById('video-el');
+  document.getElementById('stat-frames').textContent = frames.length;
+  document.getElementById('stat-fps').textContent = fps;
+  document.getElementById('stat-size').textContent = w + '×' + h;
+  document.getElementById('stat-dur').textContent = vid.duration ? vid.duration.toFixed(1)+'s' : '—';
+
+  // Fill output grid
+  const grid = document.getElementById('output-grid');
+  grid.innerHTML = '';
+  frames.forEach((f, i) => {
+    const item = document.createElement('div');
+    item.className = 'output-item';
+    item.innerHTML = `
+      <img src="${f.url}" class="frame-thumb" id="thumb-${i}" onclick="toggleSelect(${i})">
+      <div class="frame-num">Frame ${i+1}</div>
+      <a href="${f.url}" download="frame_${String(i+1).padStart(4,'0')}.png">↓ DL</a>
+    `;
+    grid.appendChild(item);
+  });
+
+  // Setup animation canvas
+  const canvas = document.getElementById('anim-preview');
+  canvas.width = w; canvas.height = h;
+  startAnim();
+
+  // Generate Lua
+  generateLua();
+
+  document.getElementById('preview-panel').style.display = 'block';
+  document.getElementById('preview-panel').scrollIntoView({ behavior: 'smooth' });
+}
+
+// ── ANIMATION PREVIEW ──
+function startAnim() {
+  if (animInterval) clearInterval(animInterval);
+  animFrame = 0;
+  animPlaying = true;
+  document.getElementById('play-btn').textContent = '⏸ Pause';
+  const fps = parseInt(document.getElementById('preview-fps').value);
+  animInterval = setInterval(drawAnimFrame, 1000/fps);
+}
+
+function drawAnimFrame() {
+  if (!frames.length) return;
+  const canvas = document.getElementById('anim-preview');
+  const ctx = canvas.getContext('2d');
+  const img = new Image();
+  img.onload = () => ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+  img.src = frames[animFrame].dataUrl;
+  animFrame = (animFrame + 1) % frames.length;
+}
+
+function toggleAnim() {
+  if (animPlaying) {
+    clearInterval(animInterval); animPlaying = false;
+    document.getElementById('play-btn').textContent = '▶ Play';
+  } else {
+    startAnim(); animPlaying = true;
+  }
+}
+
+function resetAnim() { animFrame = 0; }
+function restartAnim() { if (animPlaying) startAnim(); }
+
+// ── FRAME SELECTION ──
+function toggleSelect(i) {
+  const thumb = document.getElementById('thumb-'+i);
+  if (selectedFrames.has(i)) {
+    selectedFrames.delete(i);
+    thumb.classList.remove('selected');
+  } else {
+    selectedFrames.add(i);
+    thumb.classList.add('selected');
+  }
+  document.getElementById('dl-selected-btn').disabled = selectedFrames.size === 0;
+}
+
+function selectAll() {
+  frames.forEach((_,i) => { selectedFrames.add(i); document.getElementById('thumb-'+i)?.classList.add('selected'); });
+  document.getElementById('dl-selected-btn').disabled = false;
+}
+
+function deselectAll() {
+  frames.forEach((_,i) => { selectedFrames.delete(i); document.getElementById('thumb-'+i)?.classList.remove('selected'); });
+  document.getElementById('dl-selected-btn').disabled = true;
+}
+
+// ── DOWNLOADS ──
+async function downloadAll() {
+  if (!frames.length) return;
+  toast('⟳ Membuat ZIP...');
+  const zip = new JSZip();
+  const folder = zip.folder('starcore_frames');
+  frames.forEach((f, i) => {
+    folder.file(`frame_${String(i+1).padStart(4,'0')}.png`, f.blob);
+  });
+  const blob = await zip.generateAsync({ type: 'blob' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'starcore_frames.zip';
+  a.click();
+  toast('✓ ZIP downloaded!');
+}
+
+async function downloadSelected() {
+  if (!selectedFrames.size) return;
+  const zip = new JSZip();
+  selectedFrames.forEach(i => {
+    zip.file(`frame_${String(i+1).padStart(4,'0')}.png`, frames[i].blob);
+  });
+  const blob = await zip.generateAsync({ type: 'blob' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'starcore_selected.zip';
+  a.click();
+  toast('✓ Selected frames downloaded!');
+}
+
+// ── LUA GENERATOR ──
+function generateLua() {
+  const fps = parseInt(document.getElementById('preview-fps').value) || 12;
+  const n = frames.length;
+  const lua = `-- ============================================================
+--  STARCORE LOADING SCREEN — Sprite Animation
+--  Generated by STARCORE Sprite Generator
+--  Total Frames: ${n} | Playback FPS: ${fps}
+-- ============================================================
+-- CARA PAKAI:
+-- 1. Upload tiap frame PNG sebagai Decal di create.roblox.com
+-- 2. Copy asset ID tiap decal (format: rbxassetid://XXXXXXXXX)
+-- 3. Isi array FRAME_IDS di bawah dengan urutan ID yang benar
+-- 4. Atur SPRITE_FPS sesuai kecepatan animasi yang kamu mau
+-- ============================================================
+
+local TweenService = game:GetService("TweenService")
+local ReplicatedFirst = game:GetService("ReplicatedFirst")
+local StarterGui = game:GetService("StarterGui")
+local GroupService = game:GetService("GroupService")
+local Lighting = game:GetService("Lighting")
+local MaterialService = game:GetService("MaterialService")
+local Workspace = game:GetService("Workspace")
+
+local Plr = game:GetService("Players").LocalPlayer
+local Char = Plr.Character or Plr.CharacterAdded:Wait()
+local Hrp = Char:WaitForChild("HumanoidRootPart")
+
+-- ============================================================
+--  [KONFIGURASI — EDIT DI SINI]
+-- ============================================================
+
+local SPRITE_FPS = ${fps}          -- Kecepatan animasi (frame per detik)
+local LOOP_ANIMATION = true   -- true = loop terus, false = sekali putar
+local groupId = 505859307
+
+-- Isi dengan asset ID dari Roblox Decal (upload PNG satu per satu)
+-- Format: "rbxassetid://XXXXXXXXXX"
+local FRAME_IDS = {
+${Array.from({length:Math.min(n,10)},(_,i)=>`    "rbxassetid://PASTE_FRAME_${i+1}_ID_HERE",`).join('\n')}
+${n>10?`    -- ... dan ${n-10} frame lainnya\n    -- Total: ${n} frame`:''}
+}
+
+local WelcomeMessage  = "Welcome to STARCORE BY HSTR"
+local LoadingBarDelay = 3
+local LoadingTime     = math.max(${n} / SPRITE_FPS, 10)  -- Auto-calculated
+
+local TipMessages = {
+    "Welcome to STARCORE by HSTR",
+    "Dont forget to join the Community",
+    "HSTR ON TOP!"
+}
+
+-- ============================================================
+--  SETUP UI
+-- ============================================================
+
+local LoadingUI    = script.LoadingUI:Clone()
+local MainFrame    = LoadingUI:WaitForChild("MainFrame")
+local Circle       = MainFrame:WaitForChild("Circle")
+local LoadingLabel = MainFrame:WaitForChild("LoadingText")
+local GraphFrame   = MainFrame:WaitForChild("Graphics")
+local HighBtn      = GraphFrame:WaitForChild("HIGH")
+local LowBtn       = GraphFrame:WaitForChild("LOW")
+local VeryLowBtn   = GraphFrame:WaitForChild("VERYLOW")
+local SkipFrame    = MainFrame:WaitForChild("SkipFrame")
+local SkipBtn      = SkipFrame:WaitForChild("SkipButton")
+local Bar          = MainFrame:WaitForChild("Bar")
+local BackBar      = Bar:WaitForChild("BackBar")
+local Percent      = MainFrame:WaitForChild("Percent")
+local Tip          = MainFrame:WaitForChild("Tip")
+local ClickSFX     = LoadingUI:WaitForChild("Click")
+local HoverSFX     = LoadingUI:WaitForChild("Hover")
+
+-- Background sprite frame
+local BgLabel = Instance.new("ImageLabel")
+BgLabel.Name          = "SpriteBG"
+BgLabel.Size          = UDim2.new(1, 0, 1, 0)
+BgLabel.Position      = UDim2.new(0, 0, 0, 0)
+BgLabel.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+BgLabel.BorderSizePixel  = 0
+BgLabel.ZIndex           = 1
+BgLabel.ScaleType        = Enum.ScaleType.Crop
+BgLabel.Image            = FRAME_IDS[1] or ""
+BgLabel.ImageTransparency = 0
+BgLabel.Parent = MainFrame
+
+-- Semua elemen UI lain harus ZIndex > 1 agar tampil di atas background
+
+-- ============================================================
+--  STATE
+-- ============================================================
+
+local GraphSelected = false
+local Graph         = false
+local StillLoading  = true
+local TipShown      = true
+local AnimRunning   = true
+
+Hrp.Anchored = true
+ReplicatedFirst:RemoveDefaultLoadingScreen()
+StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.All, false)
+SkipFrame.Visible  = false
+GraphFrame.Visible = false
+Bar.Visible        = false
+LoadingUI.Parent   = Plr:WaitForChild("PlayerGui")
+
+-- ============================================================
+--  SPRITE ANIMATION LOOP
+-- ============================================================
+
+task.spawn(function()
+    local frameIndex = 1
+    local frameDelay = 1 / SPRITE_FPS
+    while AnimRunning and LoadingUI.Parent do
+        BgLabel.Image = FRAME_IDS[frameIndex] or ""
+        frameIndex = frameIndex + 1
+        if frameIndex > #FRAME_IDS then
+            if LOOP_ANIMATION then
+                frameIndex = 1
+            else
+                AnimRunning = false
+                break
+            end
+        end
+        task.wait(frameDelay)
+    end
+end)
+
+-- ============================================================
+--  FUNGSI LOADING
+-- ============================================================
+
+local function GraphicsOptions()
+    if Graph then return end
+    Graph = true
+    TweenService:Create(LoadingLabel, TweenInfo.new(0.5), {TextTransparency=1}):Play()
+    task.wait(0.5)
+    GraphFrame.Visible = true
+    local FI = TweenInfo.new(0.5)
+    for _, c in ipairs(GraphFrame:GetDescendants()) do
+        if c:IsA("ImageLabel") then c.ImageTransparency=1; TweenService:Create(c,FI,{ImageTransparency=0}):Play()
+        elseif c:IsA("GuiObject") then c.BackgroundTransparency=1; TweenService:Create(c,FI,{BackgroundTransparency=0}):Play() end
+        if c:IsA("TextLabel") or c:IsA("TextButton") then c.TextTransparency=1; TweenService:Create(c,FI,{TextTransparency=0}):Play() end
+        if c:IsA("UIStroke") then c.Transparency=1; TweenService:Create(c,FI,{Transparency=0}):Play() end
+    end
+end
+
+local function FinishLoading()
+    if GraphSelected then return end
+    GraphSelected = true
+    AnimRunning = false
+    local FO = TweenInfo.new(0.8)
+    TweenService:Create(BgLabel, FO, {ImageTransparency=1}):Play()
+    for _, c in ipairs(GraphFrame:GetDescendants()) do
+        if c:IsA("GuiObject") then TweenService:Create(c,FO,{BackgroundTransparency=1}):Play() end
+        if c:IsA("TextLabel") or c:IsA("TextButton") then TweenService:Create(c,FO,{TextTransparency=1}):Play() end
+        if c:IsA("UIStroke") then TweenService:Create(c,FO,{Transparency=1}):Play() end
+    end
+    task.wait(0.8)
+    StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.All, true)
+    Hrp.Anchored = false
+    task.wait(0.3)
+    pcall(function() GroupService:PromptJoinAsync(groupId, Plr) end)
+    task.wait(0.5)
+    LoadingUI:Destroy()
+end
+
+local function LastSequence()
+    if not StillLoading then return end
+    StillLoading = false; TipShown = false
+    local FO = TweenInfo.new(0.5)
+    TweenService:Create(Bar,FO,{BackgroundTransparency=1}):Play()
+    TweenService:Create(BackBar,FO,{BackgroundTransparency=1}):Play()
+    TweenService:Create(Percent,FO,{TextTransparency=1}):Play()
+    TweenService:Create(Tip,FO,{TextTransparency=1}):Play()
+    TweenService:Create(Circle,FO,{ImageTransparency=1}):Play()
+    TweenService:Create(SkipFrame,FO,{BackgroundTransparency=1}):Play()
+    TweenService:Create(SkipBtn,FO,{BackgroundTransparency=1,TextTransparency=1}):Play()
+    local S = SkipFrame:FindFirstChildOfClass("UIStroke")
+    if S then TweenService:Create(S,FO,{Transparency=1}):Play() end
+    task.wait(0.5)
+    LoadingLabel.Text = WelcomeMessage
+    LoadingLabel.TextTransparency = 0
+    task.wait(2)
+    GraphicsOptions()
+end
+
+-- ============================================================
+--  HOVER & BUTTONS
+-- ============================================================
+
+local function HoverEffect(Btn)
+    local OS = Btn.Size
+    local ti = TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+    Btn.MouseEnter:Connect(function() HoverSFX:Play(); TweenService:Create(Btn,ti,{Size=OS+UDim2.new(0,4,0,4)}):Play() end)
+    Btn.MouseLeave:Connect(function() TweenService:Create(Btn,ti,{Size=OS}):Play() end)
+end
+
+HighBtn.MouseButton1Click:Connect(function()
+    if GraphSelected then return end; ClickSFX:Play()
+    Lighting.GlobalShadows = true; FinishLoading()
+end)
+LowBtn.MouseButton1Click:Connect(function()
+    if GraphSelected then return end; ClickSFX:Play()
+    Lighting.GlobalShadows = false; FinishLoading()
+end)
+VeryLowBtn.MouseButton1Click:Connect(function()
+    if GraphSelected then return end; ClickSFX:Play()
+    MaterialService:SetBaseMaterialOverride(Enum.Material.SmoothPlastic,"None")
+    Lighting.GlobalShadows=false; Lighting.ShadowSoftness=0
+    for _,p in pairs(Workspace:GetDescendants()) do if p:IsA("BasePart") then p.CastShadow=false end end
+    FinishLoading()
+end)
+SkipBtn.MouseButton1Click:Connect(function() ClickSFX:Play(); LastSequence() end)
+HoverEffect(HighBtn); HoverEffect(LowBtn); HoverEffect(VeryLowBtn)
+
+-- ============================================================
+--  LOADING BAR
+-- ============================================================
+
+task.spawn(function()
+    while LoadingUI.Parent do
+        Circle.Rotation = 0
+        TweenService:Create(Circle,TweenInfo.new(1,Enum.EasingStyle.Linear),{Rotation=-360}):Play()
+        task.wait(1)
+    end
+end)
+
+task.spawn(function()
+    task.wait(LoadingBarDelay+1)
+    while TipShown do
+        for _,m in ipairs(TipMessages) do
+            if not TipShown then break end
+            Tip.Text = m; task.wait(4)
+        end
+    end
+end)
+
+LoadingLabel.Text = "Getting things ready..."
+task.wait(LoadingBarDelay)
+TweenService:Create(LoadingLabel,TweenInfo.new(0.5),{TextTransparency=1}):Play()
+task.wait(0.5)
+
+Bar.Visible=true; Bar.BackgroundTransparency=1
+BackBar.BackgroundTransparency=1; Percent.TextTransparency=1; Tip.TextTransparency=1
+BackBar.Size=UDim2.new(0,0,1,0); Percent.Text="0%"
+
+local ti = TweenInfo.new(0.5)
+TweenService:Create(Bar,ti,{BackgroundTransparency=0.6}):Play()
+TweenService:Create(BackBar,ti,{BackgroundTransparency=0}):Play()
+TweenService:Create(Percent,ti,{TextTransparency=0}):Play()
+Tip.Text=TipMessages[1]; TweenService:Create(Tip,ti,{TextTransparency=0}):Play()
+
+local skipShown = false
+for i=1,100 do
+    if not StillLoading then break end
+    if i>=10 and not skipShown then
+        skipShown=true; SkipFrame.Visible=true; SkipFrame.BackgroundTransparency=1
+        TweenService:Create(SkipFrame,TweenInfo.new(0.5),{BackgroundTransparency=0.9}):Play()
+    end
+    Percent.Text = i.."%"
+    TweenService:Create(BackBar,TweenInfo.new(LoadingTime/100),{Size=UDim2.new(i/100,0,1,0)}):Play()
+    task.wait(LoadingTime/100)
+end
+
+if StillLoading then
+    Percent.Text="100%"; TipShown=false; task.wait(1); LastSequence()
+end`;
+
+  document.getElementById('lua-code').textContent = lua;
+}
+
+function copyLua() {
+  navigator.clipboard.writeText(document.getElementById('lua-code').textContent)
+    .then(() => toast('✓ Script copied!'));
+}
+
+function downloadLua() {
+  const blob = new Blob([document.getElementById('lua-code').textContent], {type:'text/plain'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'StarCoreLoadingScreen.lua';
+  a.click();
+  toast('✓ Script downloaded!');
+}
+
+// ── TABS ──
+function switchTab(id, btn) {
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(b => b.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  btn.classList.add('active');
+}
+
+// ── RESET ──
+function resetAll() {
+  frames = []; selectedFrames.clear();
+  if (animInterval) clearInterval(animInterval);
+  document.getElementById('preview-panel').style.display = 'none';
+  document.getElementById('progress-panel').style.display = 'none';
+  document.getElementById('video-preview-wrap').style.display = 'none';
+  document.getElementById('extract-btn').disabled = true;
+  document.getElementById('file-input').value = '';
+  videoFile = null;
+}
+
+// ── TOAST ──
+function toast(msg, color) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.style.borderColor = color || '#00ffaa';
+  t.style.color = color || '#00ffaa';
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2800);
+}
+</script>
+</body>
+</html>
